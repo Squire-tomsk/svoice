@@ -7,7 +7,6 @@
 # Authors: Yossi Adi (adiyoss)
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
 import json
 import logging
 import sys
@@ -20,7 +19,7 @@ import torch
 from .models.sisnr_loss import cal_loss
 from .data.data import Validset
 from . import distrib
-from .utils import bold, deserialize_model, LogProgress
+from .utils import bold, deserialize_model, LogProgress, ProcessPoolExecutorWrapper
 from .evaluate import _run_metrics
 
 
@@ -101,7 +100,7 @@ def evaluate_auto_select(args):
     y_hat = torch.zeros((4))
 
     pendings = []
-    with ProcessPoolExecutor(args.num_workers) as pool:
+    with ProcessPoolExecutorWrapper(args.num_workers) as pool:
         with torch.no_grad():
             iterator = LogProgress(logger, data_loader, name="Eval estimates")
             for i, data in enumerate(iterator):

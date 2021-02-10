@@ -7,7 +7,6 @@
 # Authors: Eliya Nachmani (enk100), Yossi Adi (adiyoss), Lior Wolf and Alexandre Defossez (adefossez)
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
 import json
 import logging
 import sys
@@ -20,7 +19,7 @@ import torch
 from .models.sisnr_loss import cal_loss
 from .data.data import Validset
 from . import distrib
-from .utils import bold, deserialize_model, LogProgress
+from .utils import bold, deserialize_model, LogProgress, ProcessPoolExecutorWrapper
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ parser.add_argument('data_dir',
                     help='directory including mix.json, s1.json, s2.json, ... files')
 parser.add_argument('--device', default="cuda")
 parser.add_argument('--sdr', type=int, default=0)
-parser.add_argument('--sample_rate', default=16000,
+parser.add_argument('--sample_rate', default=8000,
                     type=int, help='Sample rate')
 parser.add_argument('--num_workers', type=int, default=5)
 parser.add_argument('-v', '--verbose', action='store_const', const=logging.DEBUG,
@@ -67,7 +66,7 @@ def evaluate(args, model=None, data_loader=None, sr=None):
             dataset, batch_size=1, num_workers=args.num_workers)
         sr = args.sample_rate
     pendings = []
-    with ProcessPoolExecutor(args.num_workers) as pool:
+    with ProcessPoolExecutorWrapper(args.num_workers) as pool:
         with torch.no_grad():
             iterator = LogProgress(logger, data_loader, name="Eval estimates")
             for i, data in enumerate(iterator):

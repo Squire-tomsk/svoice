@@ -14,6 +14,7 @@ import os
 import time
 import math
 import torch
+from concurrent.futures import ProcessPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -239,3 +240,26 @@ def overlap_and_add(signal, frame_step):
     result.index_add_(-2, frame, subframe_signal)
     result = result.view(*outer_dimensions, -1)
     return result
+
+
+class ProcessPoolExecutorWrapper:
+    def __init__(self, max_workers=None, *args, **kwargs):
+        self.max_workers = max_workers
+        if self.max_workers != 0:
+            self.pool = ProcessPoolExecutor(max_workers, *args, **kwargs)
+
+    def submit(self, *args, **kwargs):
+        if self.max_workers != 0:
+            return self.pool.submit(*args, **kwargs)
+        else:
+            return args[0](*args[1:], **kwargs)
+
+    def __enter__(self):
+        if self.max_workers != 0:
+            return self.pool.__enter__()
+        else:
+            return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if self.max_workers != 0:
+            self.pool.__exit__(exc_type, exc_value, exc_traceback)
