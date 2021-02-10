@@ -128,7 +128,7 @@ class DPMulCat(nn.Module):
 
 class Separator(nn.Module):
     def __init__(self, input_dim, feature_dim, hidden_dim, output_dim, num_spk=2,
-                 layer=4, segment_size=100, input_normalize=False, bidirectional=True):
+                 layer=4, segment_size=100, input_normalize=False, bidirectional=True, dropout=0.0):
         super(Separator, self).__init__()
 
         self.input_dim = input_dim
@@ -142,7 +142,7 @@ class Separator(nn.Module):
         self.input_normalize = input_normalize
 
         self.rnn_model = DPMulCat(self.feature_dim, self.hidden_dim,
-                                  self.feature_dim, self.num_spk, num_layers=layer, bidirectional=bidirectional, input_normalize=input_normalize)
+                                  self.feature_dim, self.num_spk, num_layers=layer, bidirectional=bidirectional, input_normalize=input_normalize, dropout=dropout)
 
     # ======================================= #
     # The following code block was borrowed and modified from https://github.com/yluo42/TAC
@@ -217,7 +217,7 @@ class Separator(nn.Module):
 
 class SWave(nn.Module):
     @capture_init
-    def __init__(self, N, L, H, R, C, sr, segment, input_normalize):
+    def __init__(self, N, L, H, R, C, sr, segment, input_normalize, encoder_dropout=0.0, rnn_dropout=0.0):
         super(SWave, self).__init__()
         # hyper-parameter
         self.N, self.L, self.H, self.R, self.C, self.sr, self.segment = N, L, H, R, C, sr, segment
@@ -232,10 +232,10 @@ class SWave(nn.Module):
             np.sqrt(2 * self.sr * self.segment / (self.L/2)))
 
         # model sub-networks
-        self.encoder = Encoder(L, N)
+        self.encoder = Encoder(L, N, dropout=encoder_dropout)
         self.decoder = Decoder(L)
         self.separator = Separator(self.filter_dim + self.N, self.N, self.H,
-                                   self.filter_dim, self.num_spk, self.layer, self.segment_size, self.input_normalize)
+                                   self.filter_dim, self.num_spk, self.layer, self.segment_size, self.input_normalize, dropout=rnn_dropout)
         # init
         for p in self.parameters():
             if p.dim() > 1:
@@ -261,16 +261,17 @@ class SWave(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, L, N):
+    def __init__(self, L, N, dropout=0.0):
         super(Encoder, self).__init__()
         self.L, self.N = L, N
         # setting 50% overlap
         self.conv = nn.Conv1d(
             1, N, kernel_size=L, stride=L // 2, bias=False)
+        self.dropout = nn.Dropout2d(p=dropout)
 
     def forward(self, mixture):
         mixture = torch.unsqueeze(mixture, 1)
-        mixture_w = F.relu(self.conv(mixture))
+        mixture_w = F.relu(self.dropout(self.conv(mixture)))
         return mixture_w
 
 
