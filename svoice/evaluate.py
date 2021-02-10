@@ -31,12 +31,13 @@ parser.add_argument('model_path',
 parser.add_argument('data_dir',
                     help='directory including mix.json, s1.json, s2.json, ... files')
 parser.add_argument('--device', default="cuda")
-parser.add_argument('--sdr', type=int, default=0)
 parser.add_argument('--sample_rate', default=8000,
                     type=int, help='Sample rate')
 parser.add_argument('--num_workers', type=int, default=5)
 parser.add_argument('-v', '--verbose', action='store_const', const=logging.DEBUG,
                     default=logging.INFO, help="More loggging")
+parser.add_argument('-m', '--metrics_file', help='file path for sample metrics')
+parser.add_argument('--num_prints', type=int, default=5)
 
 
 def evaluate(args, model=None, data_loader=None, sr=None):
@@ -65,10 +66,11 @@ def evaluate(args, model=None, data_loader=None, sr=None):
         data_loader = distrib.loader(
             dataset, batch_size=1, num_workers=args.num_workers)
         sr = args.sample_rate
+    losses = []
     pendings = []
     with ProcessPoolExecutorWrapper(args.num_workers) as pool:
         with torch.no_grad():
-            iterator = LogProgress(logger, data_loader, name="Eval estimates")
+            iterator = LogProgress(logger, data_loader, updates=args.num_prints, name="Eval estimates")
             for i, data in enumerate(iterator):
                 # Get batch data
                 mixture, lengths, sources = [x.to(args.device) for x in data]
@@ -82,16 +84,27 @@ def evaluate(args, model=None, data_loader=None, sr=None):
                 sources = sources.cpu()
                 mixture = mixture.cpu()
 
+                losses.append(sisnr_loss)
                 pendings.append(
                     pool.submit(_run_metrics, sources, reorder_estimate, mixture, None,
                                 sr=sr))
                 total_cnt += sources.shape[0]
 
             for pending in LogProgress(logger, pendings, updates, name="Eval metrics"):
-                sisnr_i, pesq_i, stoi_i = pending.result()
+                sisnr_i, pesq_i, stoi_i = pending.result() if args.num_workers != 0 else pending
                 total_sisnr += sisnr_i
                 total_pesq += pesq_i
                 total_stoi += stoi_i
+
+    if args.metrics_file is not None:
+        metrics_data = []
+        for loss, pending in zip(losses, pendings):
+            if args.num_workers != 0:
+                pending = pending.result()
+            metrics_data.append(f'{loss}, {pending[0]}, {pending[1]}, {pending[2]}')
+        metrics_data = '\n'.join(metrics_data)
+        with open(args.metrics_file, 'w') as metrics_file:
+            metrics_file.write(metrics_data)
 
     metrics = [total_sisnr, total_pesq, total_stoi]
     sisnr, pesq, stoi = distrib.average(
