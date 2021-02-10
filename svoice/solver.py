@@ -100,7 +100,7 @@ class Solver(object):
             else:
                 self.model.load_state_dict(package['model']['state'])
 
-            if 'optimizer' in package and not self.args.continue_best:
+            if 'optimizer' in package and not self.args.continue_best and not self.args.drop_optimizer_state:
                 logger.info(f'Load optimizer state')
                 self.optimizer.load_state_dict(package['optimizer'])
             self.history = package['history']
