@@ -19,11 +19,12 @@ verbose: 0
 show: 0   # just show the model and its size and exit
 
 # Checkpointing, by default automatically load last checkpoint
-checkpoint: True
+checkpoint: true
 continue_from: '' # Only pass the name of the exp, like `exp_dset=wham`
                   # this arg is ignored for the naming of the exp!
 continue_best: false
-restart: False # Ignore existing checkpoints
+restart: false # Ignore existing checkpoints
+drop_optimizer_state: false # Do not use checkpoint optimizer state
 checkpoint_file: checkpoint.th
 history_file: history.json
 samples_dir: samples
@@ -41,7 +42,7 @@ keep_last: 0
 optim: adam
 lr: 5e-4
 beta2: 0.999
-stft_loss: False
+stft_loss: false
 stft_sc_factor: .5
 stft_mag_factor: .5
 epochs: 100
@@ -64,7 +65,7 @@ swave:
   H: 128
   R: 6
   C: 2
-  input_normalize: False
+  input_normalize: false
 
 # Experiment launching, distributed
 ddp: false
