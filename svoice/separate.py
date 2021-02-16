@@ -32,8 +32,8 @@ parser.add_argument("--device", default="cuda")
 parser.add_argument("--sample_rate", default=8000, type=int, help="Sample rate")
 parser.add_argument("--batch_size", default=1, type=int, help="Batch size")
 parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, default=logging.INFO, help="More loggging")
-parser.add_argument("--window-size", type=int, default=420, help="Sliding window size in seconds")
-parser.add_argument("--stride", type=int, default=390, help="Sliding window stride in seconds")
+parser.add_argument("--window-size", type=int, default=2520, help="Sliding window size in seconds")
+parser.add_argument("--stride", type=int, default=2490, help="Sliding window stride in seconds")
 
 
 def save_wavs(estimate_source, mix_sig, lengths, filenames, out_dir, sr=8000):
