@@ -34,9 +34,18 @@ parser.add_argument("--batch_size", default=1, type=int, help="Batch size")
 parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, default=logging.INFO, help="More loggging")
 parser.add_argument("--window-size", type=int, default=2520, help="Sliding window size in seconds")
 parser.add_argument("--stride", type=int, default=2490, help="Sliding window stride in seconds")
+parser.add_argument("--debug", action="store_true")
 
 
-def save_wavs(estimate_source, mix_sig, lengths, filenames, out_dir, sr=8000):
+def save_wavs(estimate_source,
+              mix_sig,
+              lengths,
+              filenames,
+              out_dir,
+              sr=8000,
+              save_mix=True,
+              save_channels=True,
+              save_stereo=False):
     # Remove padding and flat
     flat_estimate = remove_pad(estimate_source, lengths)
     mix_sig = remove_pad(mix_sig, lengths)
@@ -44,11 +53,16 @@ def save_wavs(estimate_source, mix_sig, lengths, filenames, out_dir, sr=8000):
     for i, filename in enumerate(filenames):
         filename = os.path.join(
             out_dir, os.path.basename(filename).strip(".wav"))
-        write(mix_sig[i], filename + ".wav", sr=sr)
+        if save_mix:
+            write(mix_sig[i], filename + "_mix.wav", sr=sr)
         C = flat_estimate[i].shape[0]
         # future support for wave playing
-        for c in range(C):
-            write(flat_estimate[i][c], filename + f"_s{c + 1}.wav")
+        if save_channels:
+            for c in range(C):
+                write(flat_estimate[i][c], filename + f"_s{c + 1}.wav")
+        if save_stereo:
+            assert C == 2, "Only 2 channels stereo is allowed to save"
+            write(flat_estimate[i].T, filename + ".wav")
 
 
 def write(inputs, filename, sr=8000):
@@ -148,7 +162,15 @@ def separate(args, model=None, local_out_dir=None):
 
             estimate_sources = align_estimated_sources(separated_audio, stride, lengths)
             # save wav files
-            save_wavs(estimate_sources, mixture, lengths, filenames, out_dir, sr=args.sample_rate)
+            save_wavs(estimate_sources,
+                      mixture,
+                      lengths,
+                      filenames,
+                      out_dir,
+                      sr=args.sample_rate,
+                      save_mix=args.debug,
+                      save_channels=args.debug,
+                      save_stereo=~args.debug)
 
 
 if __name__ == "__main__":
