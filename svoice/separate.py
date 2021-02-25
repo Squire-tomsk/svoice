@@ -33,7 +33,7 @@ parser.add_argument("--sample_rate", default=8000, type=int, help="Sample rate")
 parser.add_argument("--batch_size", default=1, type=int, help="Batch size")
 parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, default=logging.INFO, help="More loggging")
 parser.add_argument("--window-size", type=int, default=2520, help="Sliding window size in seconds")
-parser.add_argument("--stride", type=int, default=2490, help="Sliding window stride in seconds")
+parser.add_argument("--window-stride", type=int, default=2490, help="Sliding window stride in seconds")
 parser.add_argument("--debug", action="store_true")
 
 
@@ -147,7 +147,7 @@ def separate(args, model=None, local_out_dir=None):
     distrib.barrier()
 
     window_size = args.window_size * args.sample_rate
-    stride = args.stride * args.sample_rate
+    window_stride = args.window_stride * args.sample_rate
 
     with torch.no_grad():
         for i, data in enumerate(tqdm.tqdm(eval_loader, ncols=120)):
@@ -155,12 +155,12 @@ def separate(args, model=None, local_out_dir=None):
             # Get batch data
             mixture, lengths, filenames = data
             lengths = lengths.to(args.device)
-            for j in range(mixture.shape[-1] // stride + 1):
-                mixture_piece = mixture[..., stride*j:stride*j + window_size].to(args.device)
+            for j in range(mixture.shape[-1] // window_stride + 1):
+                mixture_piece = mixture[..., window_stride*j:window_stride*j + window_size].to(args.device)
                 # Forward
                 separated_audio.append(model(mixture_piece)[-1])
 
-            estimate_sources = align_estimated_sources(separated_audio, stride, lengths)
+            estimate_sources = align_estimated_sources(separated_audio, window_stride, lengths)
             # save wav files
             save_wavs(estimate_sources,
                       mixture,

@@ -73,7 +73,7 @@ class Audioset:
             if self.length is not None:
                 offset = self.stride * index
                 num_frames = self.length
-            out = torchaudio.load(str(file), offset=offset, num_frames=num_frames).mean(dim=0)
+            out = torchaudio.load(str(file), offset=offset, num_frames=num_frames)[0].mean(dim=0, keepdim=True)
             if self.augment:
                 out = self.augment(out.squeeze(0).numpy()).unsqueeze(0)
             if num_frames:
