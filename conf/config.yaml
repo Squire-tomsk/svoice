@@ -39,6 +39,11 @@ eval_every: 10
 keep_last: 0
 metrics_file: null
 
+# Separation stuff
+window_size: 2520
+window_stride: 2490
+debug: true
+
 # Optimization related
 optim: adam
 lr: 5e-4
